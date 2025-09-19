@@ -25,7 +25,7 @@ let students = [
   { id: "2", name: "Aditi", age: 21, course: "Mathematics" },
 ];
 
-// Step 3: Resolvers (functions to get/modify data)
+// Step 3: Resolvers
 const resolvers = {
   Query: {
     students: () => students,
@@ -40,8 +40,16 @@ const resolvers = {
   },
 };
 
-// Step 4: Create and start Apollo Server
-const server = new ApolloServer({ typeDefs, resolvers });
+// Step 4: Create Apollo Server with CORS
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  csrfPrevention: true,
+  cors: {
+    origin: "http://localhost:5173", // your frontend
+    credentials: true,
+  },
+});
 
 server.listen({ port: 4000 }).then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`);
