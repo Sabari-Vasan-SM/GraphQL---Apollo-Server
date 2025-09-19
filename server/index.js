@@ -46,7 +46,7 @@ const server = new ApolloServer({
   resolvers,
   csrfPrevention: true,
   cors: {
-    origin: "http://localhost:5173", // your frontend
+    origin: ["http://localhost:5173", "http://localhost:5174"], // your frontend
     credentials: true,
   },
 });

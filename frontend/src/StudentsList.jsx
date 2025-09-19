@@ -13,10 +13,17 @@ const GET_STUDENTS = gql`
 `
 
 export default function StudentsList() {
+  console.log('StudentsList component rendering');
+  
   const { loading, error, data } = useQuery(GET_STUDENTS)
 
+  console.log('Query state:', { loading, error, data });
+
   if (loading) return <p>Loading...</p>
-  if (error) return <p>Error: {error.message}</p>
+  if (error) {
+    console.error('GraphQL Error:', error);
+    return <p>Error: {error.message}</p>
+  }
 
   return (
     <div>
