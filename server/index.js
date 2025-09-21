@@ -145,43 +145,145 @@ const resolvers = {
     }
   },
   Mutation: {
-    addStudent: (_, { name, age, course }) => {
-      const newStudent = { id: String(students.length + 1), name, age, course };
-      students.push(newStudent);
-      return newStudent;
-    },
-    deleteStudent: (_, { id }) => {
-      const index = students.findIndex(s => s.id === id);
-      if (index > -1) {
-        students.splice(index, 1);
-        return true;
-      }
-      return false;
-    },
-    updateStudent: (_, { id, name, age, course }) => {
-      const student = students.find(s => s.id === id);
-      if (student) {
-        if (name !== undefined) student.name = name;
-        if (age !== undefined) student.age = age;
-        if (course !== undefined) student.course = course;
+    addStudent: async (_, { name, age, course }) => {
+      try {
+        validateStudent(name, age, course);
+        
+        const student = await dataManager.addStudent({
+          name: name.trim(),
+          age,
+          course: course.trim()
+        });
+
+        logger.info(`Student added: ${student.name}`, { studentId: student.id });
         return student;
+      } catch (error) {
+        throw errorHandler(error, logger);
       }
-      return null;
     },
+
+    updateStudent: async (_, { id, name, age, course }) => {
+      try {
+        const updates = {};
+        if (name !== undefined) {
+          if (name.trim().length === 0) throw new ValidationError('Name cannot be empty');
+          updates.name = name.trim();
+        }
+        if (age !== undefined) {
+          if (age < config.validation.minAge || age > config.validation.maxAge) {
+            throw new ValidationError(`Age must be between ${config.validation.minAge} and ${config.validation.maxAge}`);
+          }
+          updates.age = age;
+        }
+        if (course !== undefined) {
+          if (course.trim().length === 0) throw new ValidationError('Course cannot be empty');
+          updates.course = course.trim();
+        }
+
+        const student = await dataManager.updateStudent(id, updates);
+        logger.info(`Student updated: ${student.name}`, { studentId: id });
+        return student;
+      } catch (error) {
+        throw errorHandler(error, logger);
+      }
+    },
+
+    deleteStudent: async (_, { id }) => {
+      try {
+        await dataManager.deleteStudent(id);
+        logger.info(`Student deleted`, { studentId: id });
+        return true;
+      } catch (error) {
+        throw errorHandler(error, logger);
+      }
+    },
+
+    bulkAddStudents: async (_, { students }) => {
+      try {
+        const addedStudents = [];
+        
+        for (const studentData of students) {
+          validateStudent(studentData.name, studentData.age, studentData.course);
+          const student = await dataManager.addStudent({
+            name: studentData.name.trim(),
+            age: studentData.age,
+            course: studentData.course.trim()
+          });
+          addedStudents.push(student);
+        }
+
+        logger.info(`Bulk added ${addedStudents.length} students`);
+        return addedStudents;
+      } catch (error) {
+        throw errorHandler(error, logger);
+      }
+    },
+
+    bulkDeleteStudents: async (_, { ids }) => {
+      try {
+        for (const id of ids) {
+          await dataManager.deleteStudent(id);
+        }
+        
+        logger.info(`Bulk deleted ${ids.length} students`, { studentIds: ids });
+        return true;
+      } catch (error) {
+        throw errorHandler(error, logger);
+      }
+    }
   },
 };
 
-// Step 4: Create Apollo Server with CORS
+// Create Apollo Server with enhanced configuration
 const server = new ApolloServer({
   typeDefs,
   resolvers,
   csrfPrevention: true,
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174"], // your frontend
-    credentials: true,
+    origin: config.server.cors.origins,
+    credentials: config.server.cors.credentials,
   },
+  plugins: [
+    {
+      requestDidStart() {
+        return {
+          didResolveOperation(requestContext) {
+            logger.debug(`Operation: ${requestContext.request.operationName}`, {
+              query: requestContext.request.query
+            });
+          },
+          didEncounterErrors(requestContext) {
+            logger.error('GraphQL errors encountered', {
+              errors: requestContext.errors.map(err => ({
+                message: err.message,
+                path: err.path
+              }))
+            });
+          }
+        };
+      }
+    }
+  ],
+  formatError: (error) => {
+    logger.error('GraphQL Error', { 
+      message: error.message,
+      path: error.path,
+      stack: error.stack 
+    });
+    return {
+      message: error.message,
+      code: error.extensions?.code || 'INTERNAL_ERROR',
+      path: error.path
+    };
+  }
 });
 
-server.listen({ port: 4000 }).then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`);
+// Start server with enhanced logging
+server.listen({ port: config.server.port }).then(({ url }) => {
+  logger.info(`🚀 GraphQL Server ready at ${url}`);
+  logger.info(`📊 Health check available at ${url}graphql`);
+  logger.info(`🔧 Configuration loaded`, { 
+    port: config.server.port,
+    corsOrigins: config.server.cors.origins 
+  });
 });
