@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, gql } from '@apollo/client'
 import LoadingSpinner from './components/LoadingSpinner'
 import Toast from './components/Toast'
+import EditStudentModal from './components/EditStudentModal'
 import { CONFIG } from './config/constants'
 
 const GET_STUDENTS = gql`
@@ -24,6 +25,7 @@ const DELETE_STUDENT = gql`
 export default function StudentsList() {
   console.log('StudentsList component rendering');
   const [toast, setToast] = useState(null);
+  const [editingStudent, setEditingStudent] = useState(null);
   
   const { loading, error, data } = useQuery(GET_STUDENTS)
   const [deleteStudent] = useMutation(DELETE_STUDENT, {
@@ -89,7 +91,7 @@ export default function StudentsList() {
               <div className="student-actions">
                 <button 
                   className="btn-edit"
-                  onClick={() => console.log('Edit student:', student.id)}
+                  onClick={() => setEditingStudent(student)}
                   title="Edit Student"
                 >
                   ✏️
@@ -114,6 +116,12 @@ export default function StudentsList() {
           onClose={() => setToast(null)}
         />
       )}
+      
+      <EditStudentModal
+        student={editingStudent}
+        isOpen={!!editingStudent}
+        onClose={() => setEditingStudent(null)}
+      />
     </div>
   )
 }
