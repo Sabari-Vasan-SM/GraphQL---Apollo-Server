@@ -16,6 +16,8 @@ const typeDefs = gql`
 
   type Mutation {
     addStudent(name: String!, age: Int!, course: String!): Student
+    deleteStudent(id: ID!): Boolean
+    updateStudent(id: ID!, name: String, age: Int, course: String): Student
   }
 `;
 
@@ -36,6 +38,24 @@ const resolvers = {
       const newStudent = { id: String(students.length + 1), name, age, course };
       students.push(newStudent);
       return newStudent;
+    },
+    deleteStudent: (_, { id }) => {
+      const index = students.findIndex(s => s.id === id);
+      if (index > -1) {
+        students.splice(index, 1);
+        return true;
+      }
+      return false;
+    },
+    updateStudent: (_, { id, name, age, course }) => {
+      const student = students.find(s => s.id === id);
+      if (student) {
+        if (name !== undefined) student.name = name;
+        if (age !== undefined) student.age = age;
+        if (course !== undefined) student.course = course;
+        return student;
+      }
+      return null;
     },
   },
 };

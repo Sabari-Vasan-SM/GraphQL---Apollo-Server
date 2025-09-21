@@ -1,5 +1,8 @@
-import React from 'react'
-import { useQuery, gql } from '@apollo/client'
+import React, { useState } from 'react'
+import { useQuery, useMutation, gql } from '@apollo/client'
+import LoadingSpinner from './components/LoadingSpinner'
+import Toast from './components/Toast'
+import { CONFIG } from './config/constants'
 
 const GET_STUDENTS = gql`
   query GetStudents {
@@ -12,20 +15,43 @@ const GET_STUDENTS = gql`
   }
 `
 
+const DELETE_STUDENT = gql`
+  mutation DeleteStudent($id: ID!) {
+    deleteStudent(id: $id)
+  }
+`
+
 export default function StudentsList() {
   console.log('StudentsList component rendering');
+  const [toast, setToast] = useState(null);
   
   const { loading, error, data } = useQuery(GET_STUDENTS)
+  const [deleteStudent] = useMutation(DELETE_STUDENT, {
+    refetchQueries: ['GetStudents'],
+    onCompleted: () => {
+      setToast({ message: CONFIG.MESSAGES.STUDENT_DELETED, type: 'success' });
+    },
+    onError: (error) => {
+      setToast({ message: `Error: ${error.message}`, type: 'error' });
+    }
+  });
 
   console.log('Query state:', { loading, error, data });
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      try {
+        await deleteStudent({ variables: { id } });
+      } catch (err) {
+        console.error('Error deleting student:', err);
+      }
+    }
+  };
 
   if (loading) return (
     <div>
       <h2>📚 Students</h2>
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading students...</p>
-      </div>
+      <LoadingSpinner message="Loading students..." />
     </div>
   )
   
@@ -46,7 +72,7 @@ export default function StudentsList() {
       <h2>📚 Students ({data.students.length})</h2>
       {data.students.length === 0 ? (
         <div className="empty-state">
-          <p>No students yet. Add your first student!</p>
+          <p>{CONFIG.MESSAGES.NO_STUDENTS}</p>
         </div>
       ) : (
         <div className="students-grid">
@@ -60,9 +86,33 @@ export default function StudentsList() {
                 <p className="student-course">{student.course}</p>
                 <span className="student-age">Age: {student.age}</span>
               </div>
+              <div className="student-actions">
+                <button 
+                  className="btn-edit"
+                  onClick={() => console.log('Edit student:', student.id)}
+                  title="Edit Student"
+                >
+                  ✏️
+                </button>
+                <button 
+                  className="btn-delete"
+                  onClick={() => handleDelete(student.id, student.name)}
+                  title="Delete Student"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           ))}
         </div>
+      )}
+      
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   )

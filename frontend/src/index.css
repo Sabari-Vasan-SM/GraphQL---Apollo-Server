@@ -207,6 +207,37 @@ input::placeholder {
   border-color: var(--primary-color);
 }
 
+.student-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.btn-edit, .btn-delete {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-edit:hover {
+  background: #fef3c7;
+  transform: scale(1.1);
+}
+
+.btn-delete:hover {
+  background: #fecaca;
+  transform: scale(1.1);
+}
+
 .student-avatar {
   width: 48px;
   height: 48px;
@@ -299,6 +330,12 @@ input::placeholder {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 0.875rem;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
 }
 
 .submit-btn {
